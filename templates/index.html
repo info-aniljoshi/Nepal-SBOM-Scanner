@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇳🇵 Nepal SBOM Scanner | AI-Powered Security</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #dc2626; /* Nepal Red */
+            --primary-dark: #b91c1c;
+            --secondary: #1e40af; /* Nepal Blue */
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: #1e293b;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .premium-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(226, 232, 240, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .premium-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4rem;
+            height: 4rem;
+            background: currentColor;
+            opacity: 0.05;
+            border-radius: 0 0 0 100%;
+            transform: translate(1rem, -1rem);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+        }
+
+        .vuln-row {
+            transition: background-color 0.2s;
+        }
+
+        .vuln-row:hover {
+            background-color: #f1f5f9;
+        }
+
+        .badge {
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+    <!-- Sticky Navigation -->
+    <nav class="glass-header sticky top-0 z-50 py-4">
+        <div class="container mx-auto px-6 flex justify-between items-center max-w-6xl">
+            <div class="flex items-center space-x-3">
+                <span class="text-3xl">🇳🇵</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-gray-900">Nepal <span class="text-red-600">SBOM</span> Scanner</h1>
+                    <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Enterprise Security for South Asia</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-6">
+                <div class="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
+                    <i data-lucide="user" class="w-4 h-4 text-gray-600"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-6 py-10 max-w-6xl">
+        <!-- Hero Section -->
+        <div class="text-center mb-12 animate-fade-in">
+            <h2 class="text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">Secure Your Software Supply Chain</h2>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">Generate compliance-ready SBOMs, analyze risks with AI, and automate fixes in seconds.</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="premium-card rounded-2xl p-8 mb-12">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- File Upload -->
+                <div class="flex flex-col">
+                    <div class="flex items-center space-x-2 mb-4 text-gray-800">
+                        <i data-lucide="upload-cloud" class="w-5 h-5 text-red-600"></i>
+                        <h3 class="font-bold">Upload Project</h3>
+                    </div>
+                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center flex-1 flex flex-col justify-center items-center hover:border-red-400 hover:bg-red-50/30 transition-all cursor-pointer group" id="dropzone">
+                        <input type="file" id="fileInput" accept=".zip" class="hidden">
+                        <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition">
+                            <i data-lucide="file-archive" class="w-6 h-6 text-red-600"></i>
+                        </div>
+                        <p class="text-sm font-medium text-gray-700">Drop ZIP archive</p>
+                        <p class="text-xs text-gray-400 mt-1">package.json, requirements.txt, etc.</p>
+                        <button onclick="document.getElementById('fileInput').click()" class="mt-4 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:shadow-sm transition">
+                            Browse Files
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Public Repo -->
+                <div class="flex flex-col">
+                    <div class="flex items-center space-x-2 mb-4 text-gray-800">
+                        <i data-lucide="github" class="w-5 h-5 text-gray-700"></i>
+                        <h3 class="font-bold">Public Repository</h3>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-6 flex-1 flex flex-col justify-center">
+                        <p class="text-xs text-gray-500 mb-3 text-center">Instant scan via URL</p>
+                        <div class="space-y-3">
+                            <input type="url" id="githubUrl" placeholder="https://github.com/..." class="w-full px-4 py-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all">
+                            <button onclick="handleGithubScan()" class="w-full py-3 bg-gray-900 text-white text-sm font-bold rounded-lg hover:bg-black transition shadow-lg shadow-gray-200">
+                                Scan Public Repo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Private Repos -->
+                <div class="flex flex-col">
+                    <div class="flex items-center space-x-2 mb-4 text-gray-800">
+                        <i data-lucide="shield-lock" class="w-5 h-5 text-blue-600"></i>
+                        <h3 class="font-bold">Private Access</h3>
+                    </div>
+                    <!-- Auth Section -->
+                    <div id="githubAuthSection" class="bg-blue-50/50 border border-blue-100 rounded-xl p-6 flex-1 flex flex-col justify-center items-center text-center">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                            <i data-lucide="lock" class="w-6 h-6 text-blue-600"></i>
+                        </div>
+                        <p class="text-xs text-blue-800 font-medium mb-4">Connect GitHub to scan your private code</p>
+                        <a href="/auth/github" class="px-6 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition flex items-center shadow-lg shadow-blue-200">
+                            Connect GitHub
+                        </a>
+                    </div>
+                    <!-- Repo Selector Section -->
+                    <div id="githubRepoSection" class="hidden bg-blue-50/50 border border-blue-100 rounded-xl p-6 flex-1 flex flex-col justify-center">
+                        <div class="flex items-center mb-4 bg-white p-2 rounded-lg border border-blue-100">
+                            <img id="githubUserAvatar" class="w-6 h-6 rounded-full mr-2 ring-2 ring-blue-50" src="" alt="">
+                            <span id="githubUserName" class="text-xs font-bold text-blue-900 truncate"></span>
+                        </div>
+                        <select id="repoSelect" class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg mb-3 focus:ring-2 focus:ring-blue-500/20 bg-white">
+                            <option value="">Loading...</option>
+                        </select>
+                        <button onclick="handlePrivateRepoScan()" class="w-full py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition shadow-lg shadow-blue-200">
+                            Scan Private
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="uploadProgress" class="hidden mt-8 p-6 bg-gray-50 rounded-xl border border-gray-100 animate-pulse">
+                <div class="flex flex-col items-center justify-center space-y-4">
+                    <div class="relative">
+                        <div class="w-12 h-12 border-4 border-red-100 border-t-red-600 rounded-full animate-spin"></div>
+                        <i data-lucide="search" class="w-5 h-5 text-red-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm font-bold text-gray-900">Scanning Project Assets...</p>
+                        <p class="text-xs text-gray-500 mt-1">Cross-referencing with global vulnerability databases</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Mini-Feed -->
+            <div id="recentActivity" class="mt-12 pt-8 border-t border-gray-100">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-bold flex items-center text-gray-700 uppercase tracking-widest text-xs">
+                        <i data-lucide="history" class="w-4 h-4 mr-2"></i>
+                        Recent Security Activity
+                    </h3>
+                    <a href="/history" class="text-xs font-bold text-red-600 hover:underline">View All Scans →</a>
+                </div>
+                <div id="activityFeed" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="text-xs text-gray-400 italic">Scanning your history...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden animate-fade-in">
+            <!-- Summary Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="premium-card rounded-2xl p-6 stat-card text-blue-600">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Total Packages</p>
+                    <div class="text-4xl font-black" id="totalPkgs">0</div>
+                    <i data-lucide="box" class="w-10 h-10 absolute bottom-4 right-4 opacity-10"></i>
+                </div>
+                <div class="premium-card rounded-2xl p-6 stat-card text-red-600">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Critical Risks</p>
+                    <div class="text-4xl font-black" id="criticalCount">0</div>
+                    <i data-lucide="alert-triangle" class="w-10 h-10 absolute bottom-4 right-4 opacity-10"></i>
+                </div>
+                <div class="premium-card rounded-2xl p-6 stat-card text-orange-500">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">High Severity</p>
+                    <div class="text-4xl font-black" id="highCount">0</div>
+                    <i data-lucide="shield-alert" class="w-10 h-10 absolute bottom-4 right-4 opacity-10"></i>
+                </div>
+                <div class="premium-card rounded-2xl p-6 stat-card text-gray-800">
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Total Vulns</p>
+                    <div class="text-4xl font-black" id="totalVulns">0</div>
+                    <i data-lucide="activity" class="w-10 h-10 absolute bottom-4 right-4 opacity-10"></i>
+                </div>
+                <div class="premium-card rounded-2xl p-6 stat-card text-white" id="gradeCard" style="background: #1e293b;">
+                    <p class="text-xs font-bold uppercase tracking-wider opacity-60 mb-1">Security Grade</p>
+                    <div class="text-4xl font-black" id="securityGrade">A</div>
+                    <i data-lucide="award" class="w-10 h-10 absolute bottom-4 right-4 opacity-10"></i>
+                </div>
+            </div>
+
+            <!-- Executive Summary Panel -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold flex items-center">
+                        <i data-lucide="file-text" class="w-5 h-5 mr-2 text-red-600"></i>
+                        Risk Analysis
+                    </h3>
+                    <div class="flex space-x-3">
+                        <a id="downloadSpdxBtn" href="#" class="hidden px-5 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-50 transition flex items-center">
+                            <i data-lucide="download" class="w-4 h-4 mr-2 text-blue-600"></i>
+                            Download SPDX
+                        </a>
+                        <button id="execSummaryBtn" onclick="generateExecutiveSummary()" class="px-5 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-black transition flex items-center shadow-lg shadow-gray-200">
+                            <i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>
+                            Generate AI Executive Summary
+                        </button>
+                    </div>
+                </div>
+                <div id="execSummaryPanel" class="hidden premium-card rounded-2xl p-8 bg-gradient-to-br from-white to-gray-50 border-l-4 border-l-red-600">
+                    <div id="execSummaryContent" class="prose max-w-none text-gray-800 leading-relaxed"></div>
+                </div>
+            </div>
+
+            <!-- Vulnerabilities Table -->
+            <div class="premium-card rounded-2xl overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <h3 class="font-bold flex items-center">
+                        <i data-lucide="list" class="w-5 h-5 mr-2 text-gray-700"></i>
+                        Vulnerability Inventory
+                    </h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-white border-b border-gray-100">
+                            <tr>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Severity</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">ID / CVE</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Issue Summary</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">CVSS</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vulnTable" class="divide-y divide-gray-50 bg-white">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="container mx-auto px-6 py-10 mt-12 border-t border-gray-100 text-center max-w-6xl">
+        <p class="text-sm text-gray-500 font-medium">© 2026 Nepal SBOM Scanner. Built for secure South Asian SaaS development. 🇳🇵</p>
+    </footer>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const results = document.getElementById('results');
+
+        let currentScanId = null;
+        let currentRepoFullName = null;
+
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Drag and Drop
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-red-400', 'bg-red-50');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-red-400', 'bg-red-50');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-red-400', 'bg-red-50');
+            const files = e.dataTransfer.files;
+            if (files.length) handleFile(files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            uploadProgress.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/scan/upload', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                uploadProgress.classList.add('hidden');
+                if (data.detail) alert('Error: ' + data.detail);
+                else displayResults(data);
+            })
+            .catch(err => {
+                uploadProgress.classList.add('hidden');
+                alert('Error: ' + err.message);
+            });
+        }
+
+        function handleGithubScan() {
+            const urlInput = document.getElementById('githubUrl');
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            uploadProgress.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            const formData = new URLSearchParams();
+            formData.append('repo_url', url);
+
+            fetch('/scan/github', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            })
+            .then(async res => {
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Failed to scan repository');
+                return data;
+            })
+            .then(data => {
+                uploadProgress.classList.add('hidden');
+                const repoName = url.replace(/\/+$/, '').split('/').pop().replace('.git', '');
+                displayResults(data, repoName);
+            })
+            .catch(err => {
+                uploadProgress.classList.add('hidden');
+                alert('Error: ' + err.message);
+            });
+        }
+
+        function displayResults(data, repoFullName = null) {
+            currentScanId = data.scan_id;
+            currentRepoFullName = repoFullName;
+            
+            // Show and link SPDX download
+            const dlBtn = document.getElementById('downloadSpdxBtn');
+            dlBtn.href = `/download/spdx/${data.scan_id}`;
+            dlBtn.classList.remove('hidden');
+
+            document.getElementById('execSummaryPanel').classList.add('hidden');
+            document.getElementById('execSummaryBtn').innerHTML = '<i data-lucide="sparkles" class="w-4 h-4 mr-2"></i> Generate AI Executive Summary';
+            
+            document.getElementById('totalPkgs').textContent = data.total_packages || 0;
+            document.getElementById('criticalCount').textContent = data.critical_count || 0;
+            document.getElementById('highCount').textContent = data.high_count || 0;
+            document.getElementById('totalVulns').textContent = (data.vulnerabilities || []).length;
+
+            // Grade Logic
+            const crit = data.critical_count || 0;
+            const high = data.high_count || 0;
+            const med = (data.vulnerabilities || []).filter(v => v.severity === 'MEDIUM').length;
+            let grade = 'A';
+            let color = '#059669'; // Green
+            if (crit > 0) { grade = 'F'; color = '#dc2626'; }
+            else if (high > 2) { grade = 'D'; color = '#ea580c'; }
+            else if (high > 0) { grade = 'C'; color = '#d97706'; }
+            else if (med > 5) { grade = 'B'; color = '#2563eb'; }
+            
+            const gradeEl = document.getElementById('securityGrade');
+            gradeEl.textContent = grade;
+            document.getElementById('gradeCard').style.background = color;
+
+            const tbody = document.getElementById('vulnTable');
+            tbody.innerHTML = '';
+
+            const severityOrder = { 'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3, 'UNKNOWN': 4 };
+            const vulns = (data.vulnerabilities || []).sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+
+            vulns.forEach(v => {
+                const colors = {
+                    'CRITICAL': 'bg-red-50 text-red-700 border-red-200',
+                    'HIGH': 'bg-orange-50 text-orange-700 border-orange-200',
+                    'MEDIUM': 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                    'LOW': 'bg-green-50 text-green-700 border-green-200',
+                    'UNKNOWN': 'bg-gray-50 text-gray-700 border-gray-200'
+                };
+                const row = document.createElement('tr');
+                row.className = 'vuln-row group';
+                row.innerHTML = `
+                    <td class="px-6 py-5 whitespace-nowrap">
+                        <span class="badge border ${colors[v.severity] || colors['UNKNOWN']}">
+                            ${v.severity}
+                        </span>
+                    </td>
+                    <td class="px-6 py-5 whitespace-nowrap text-sm font-bold text-gray-900">${v.id}</td>
+                    <td class="px-6 py-5 text-sm text-gray-600 font-medium">${v.summary || 'No summary'}</td>
+                    <td class="px-6 py-5 whitespace-nowrap text-sm text-gray-400 font-mono">${v.cvss_score || '-'}</td>
+                    <td class="px-6 py-5 whitespace-nowrap text-sm font-medium">
+                        <button onclick="explainVuln(this, '${v.id}', \`${(v.summary || '').replace(/`/g, "'").replace(/"/g, '&quot;')}\`, '${v.severity}')" class="text-blue-600 hover:text-blue-800 bg-blue-50 px-4 py-2 rounded-lg transition-all hover:bg-blue-100 flex items-center">
+                            <i data-lucide="wand-2" class="w-4 h-4 mr-2"></i>
+                            How to Fix
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            results.classList.remove('hidden');
+            lucide.createIcons();
+            window.scrollTo({ top: results.offsetTop - 100, behavior: 'smooth' });
+        }
+
+        async function explainVuln(btn, cve_id, summary, severity) {
+            const tr = btn.closest('tr');
+            let explanationRow = tr.nextElementSibling;
+            if (explanationRow && explanationRow.classList.contains('explanation-row')) {
+                explanationRow.classList.toggle('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="animate-spin h-4 w-4 border-b-2 border-blue-600 rounded-full inline-block"></div>';
+
+            try {
+                const res_scan = await fetch('/history');
+                const history = await res_scan.json();
+                const scan = history.scans.find(s => s.id == currentScanId);
+                const report = JSON.parse(scan.json_report);
+                
+                // Naive heuristic to find package name for the specific CVE
+                const pkg = report.packages.find(p => cve_id.toLowerCase().includes(p.name.toLowerCase().substring(0, 5))) || report.packages[0] || {name: 'Unknown', version: '0.0.0'};
+
+                const res = await fetch(`/explain/${cve_id}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ package_name: pkg.name, version: pkg.version, severity: severity, summary: summary })
+                });
+                const data = await res.json();
+                
+                const expRow = document.createElement('tr');
+                expRow.className = 'explanation-row bg-gray-50/50';
+                
+                let prButtonHtml = '';
+                if (currentRepoFullName) {
+                    prButtonHtml = `
+                        <div class="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+                            <button onclick="createFixPR(this, '${cve_id}', '${pkg.name}', '${pkg.version}', '${severity}', \`${summary.replace(/`/g, "'")}\`)" class="px-5 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition flex items-center shadow-lg shadow-green-100">
+                                <i data-lucide="git-pull-request" class="w-4 h-4 mr-2"></i>
+                                Open Auto-Fix PR 🚀
+                            </button>
+                        </div>
+                    `;
+                }
+
+                expRow.innerHTML = `
+                    <td colspan="5" class="px-10 py-6">
+                        <div class="premium-card rounded-2xl p-6 bg-white shadow-sm border border-blue-100">
+                            <div class="flex items-center space-x-2 mb-4 text-blue-800">
+                                <i data-lucide="cpu" class="w-5 h-5"></i>
+                                <span class="text-xs font-bold uppercase tracking-wider">AI Remediation Strategy</span>
+                            </div>
+                            <div class="text-sm text-gray-800 whitespace-pre-wrap font-medium leading-relaxed">${data.explanation || 'No explanation provided.'}</div>
+                            ${prButtonHtml}
+                        </div>
+                    </td>
+                `;
+                tr.parentNode.insertBefore(expRow, tr.nextSibling);
+                lucide.createIcons();
+            } catch (err) {
+                alert('Failed to get AI remediation. Check API key.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="wand-2" class="w-4 h-4 mr-2"></i> How to Fix';
+                lucide.createIcons();
+            }
+        }
+
+        async function createFixPR(btn, cve_id, package_name, version, severity, summary) {
+            btn.disabled = true;
+            btn.innerHTML = '<div class="animate-spin h-4 w-4 border-b-2 border-white rounded-full mr-2"></div> Working...';
+            
+            const formData = new URLSearchParams();
+            formData.append('repo_full_name', currentRepoFullName);
+            formData.append('cve_id', cve_id);
+            formData.append('package_name', package_name);
+            formData.append('current_version', version);
+            formData.append('severity', severity);
+            formData.append('summary', summary);
+
+            try {
+                const res = await fetch('/github/create-fix-pr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    btn.innerHTML = '<i data-lucide="external-link" class="w-4 h-4 mr-2"></i> View PR on GitHub';
+                    btn.classList.replace('bg-green-600', 'bg-blue-600');
+                    btn.onclick = () => window.open(data.pr_url, '_blank');
+                    btn.disabled = false;
+                    lucide.createIcons();
+                } else {
+                    throw new Error(data.error || 'Failed to create PR');
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="git-pull-request" class="w-4 h-4 mr-2"></i> Open Auto-Fix PR 🚀';
+                lucide.createIcons();
+            }
+        }
+
+        async function generateExecutiveSummary() {
+            if (!currentScanId) return;
+            const btn = document.getElementById('execSummaryBtn');
+            const content = document.getElementById('execSummaryContent');
+            const panel = document.getElementById('execSummaryPanel');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<div class="animate-spin h-4 w-4 border-b-2 border-white rounded-full mr-2"></div> Thinking...';
+            panel.classList.remove('hidden');
+            content.innerHTML = '<div class="flex items-center space-x-3 text-blue-600 font-bold"><div class="animate-bounce">🧠</div> AI is drafting report...</div>';
+
+            try {
+                const res = await fetch(`/executive-summary/${currentScanId}`);
+                const data = await res.json();
+                content.innerHTML = `<div class="whitespace-pre-wrap font-sans text-base leading-relaxed text-gray-700">${data.summary || 'Failed to generate summary.'}</div>`;
+            } catch (err) {
+                content.innerHTML = '<span class="text-red-500 font-bold">Failed to generate summary. Check API connection.</span>';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="sparkles" class="w-4 h-4 mr-2"></i> Regenerate Summary';
+                lucide.createIcons();
+            }
+        }
+
+        async function checkGitHubAuth() {
+            try {
+                const res = await fetch('/github/user');
+                const data = await res.json();
+                if (data.authenticated) {
+                    document.getElementById('githubAuthSection').classList.add('hidden');
+                    document.getElementById('githubRepoSection').classList.remove('hidden');
+                    document.getElementById('githubUserAvatar').src = data.user.avatar_url;
+                    document.getElementById('githubUserName').textContent = data.user.login;
+                    loadRepos();
+                }
+            } catch (err) { console.error('GitHub auth check failed', err); }
+        }
+
+        async function loadRepos() {
+            const select = document.getElementById('repoSelect');
+            try {
+                const res = await fetch('/github/repos');
+                const repos = await res.json();
+                select.innerHTML = '<option value="">Choose a repository...</option>';
+                repos.forEach(repo => {
+                    const option = document.createElement('option');
+                    option.value = repo.full_name;
+                    option.textContent = (repo.private ? '🔒 ' : '🌐 ') + repo.full_name;
+                    select.appendChild(option);
+                });
+            } catch (err) { select.innerHTML = '<option value="">Failed to load repositories</option>'; }
+        }
+
+        async function handlePrivateRepoScan() {
+            const repoFullName = document.getElementById('repoSelect').value;
+            if (!repoFullName) return;
+
+            uploadProgress.classList.remove('hidden');
+            results.classList.add('hidden');
+
+            const formData = new URLSearchParams();
+            formData.append('repo_full_name', repoFullName);
+
+            try {
+                const res = await fetch('/scan/github-private', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Scan failed');
+                uploadProgress.classList.add('hidden');
+                displayResults(data, repoFullName);
+            } catch (err) {
+                uploadProgress.classList.add('hidden');
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function loadActivityFeed() {
+            try {
+                const res = await fetch('/api/history');
+                const data = await res.json();
+                const feed = document.getElementById('activityFeed');
+                feed.innerHTML = '';
+                
+                (data.scans || []).slice(0, 4).forEach(scan => {
+                    const div = document.createElement('div');
+                    div.className = 'premium-card rounded-xl p-4 flex items-center justify-between hover:border-red-200 transition-all';
+                    
+                    const crit = scan.critical_count || 0;
+                    const high = scan.high_count || 0;
+                    const gradeColor = crit > 0 ? 'text-red-600' : (high > 0 ? 'text-orange-500' : 'text-green-600');
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center font-bold ${gradeColor}">
+                                ${crit > 0 ? 'F' : (high > 0 ? 'C' : 'A')}
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-gray-900">${scan.project_name}</p>
+                                <p class="text-[10px] text-gray-400 font-medium">${scan.timestamp.split(' ')[0]}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold text-gray-500">${scan.total_packages} Pkgs</p>
+                            <p class="text-[10px] font-medium ${crit > 0 ? 'text-red-500' : 'text-gray-400'}">${crit} Critical</p>
+                        </div>
+                    `;
+                    feed.appendChild(div);
+                });
+            } catch (err) { console.error('Feed failed', err); }
+        }
+
+        checkGitHubAuth();
+        loadActivityFeed();
+    </script>
+</body>
+</html>

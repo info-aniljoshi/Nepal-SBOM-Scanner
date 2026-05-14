@@ -36,10 +36,21 @@ async def check_vulnerabilities(packages: List[Package]) -> List[Vulnerability]:
 
     vuln_ids = set()
     results = data.get("results", [])
-    for result in results:
+    # OSV returns one result object per query, in the same order as `queries`
+    vuln_id_to_package = {}
+    for i, result in enumerate(results):
+        if i >= len(packages):
+            break
+        pkg = packages[i]
         for v in result.get("vulns", []):
-            if "id" in v:
-                vuln_ids.add(v["id"])
+            vid = v.get("id")
+            if not vid:
+                continue
+            vuln_ids.add(vid)
+            vuln_id_to_package.setdefault(
+                vid,
+                (pkg.name, pkg.version, pkg.ecosystem),
+            )
 
     vulns = []
     if not vuln_ids:
@@ -100,12 +111,21 @@ async def check_vulnerabilities(packages: List[Package]) -> List[Vulnerability]:
         if len(summary) > 200:
             summary = summary[:197] + "..."
 
+        vid = v.get("id", "UNKNOWN")
+        pkg_meta = vuln_id_to_package.get(vid)
+        apkg, aver, aeco = (None, None, None)
+        if pkg_meta:
+            apkg, aver, aeco = pkg_meta
+
         vulns.append(Vulnerability(
-            id=v.get("id", "UNKNOWN"),
+            id=vid,
             summary=summary,
             severity=severity,
             cvss_score=score,
-            aliases=v.get("aliases", [])
+            aliases=v.get("aliases", []),
+            affected_package=apkg,
+            affected_version=aver,
+            affected_ecosystem=aeco,
         ))
 
     return vulns
@@ -139,7 +159,6 @@ async def scan_code_for_secrets(project_path: str) -> List[Vulnerability]:
                                 match = re.search(pattern, line)
                                 if match:
                                     rel_path = os.path.relpath(file_path, project_path)
-                                    print(f"DEBUG: Found secret in {rel_path}: {key}")
                                     code_vulns.append(Vulnerability(
                                         id=f"CODE-{key}-{line_num}",
                                         summary=f"Hardcoded {key} found in {rel_path} at line {line_num}",

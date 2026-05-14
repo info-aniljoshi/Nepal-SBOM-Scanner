@@ -11,6 +11,8 @@ services:
       - DATABASE_PATH=/data/nepal_sbom.db
       - MAX_UPLOAD_SIZE_MB=50
       - UPLOAD_RATE_LIMIT=5
+      # Required for production: SESSION_SECRET_KEY, ADMIN_PASSWORD (see .env.example)
+      # Optional: GROQ_API_KEY, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, DEFAULT_GIT_BRANCH
     volumes:
       - sbom_data:/data
     networks:

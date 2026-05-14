@@ -7,20 +7,34 @@ on:
     branches: [ main, master ]
 
 jobs:
-  security_scan:
+  unit_tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run pytest
+        run: pytest tests/ -v
+
+  security_scan:
+    runs-on: ubuntu-latest
+    needs: unit_tests
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: pip install requests
 
       - name: Run Nepal SBOM Scan
+        if: ${{ secrets.NEPAL_SCANNER_URL != '' }}
         env:
           SCANNER_URL: ${{ secrets.NEPAL_SCANNER_URL }}
           SCANNER_USER: ${{ secrets.NEPAL_SCANNER_USER }}

@@ -6,12 +6,15 @@ import zipfile
 import shutil
 import subprocess
 import time
-from pathlib import Path
+import re
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import aiohttp
+
 from fastapi import FastAPI, File, UploadFile, Form, Request, HTTPException, Depends
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from starlette.responses import Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -30,8 +33,20 @@ from core.spdx_generator import generate_spdx
 from dotenv import load_dotenv
 load_dotenv()
 
-app = FastAPI(title="Nepal SBOM Scanner", version="0.2.0")
-app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET_KEY", secrets.token_hex(32)))
+APP_VERSION = os.environ.get("APP_VERSION", "1.0.0")
+
+app = FastAPI(
+    title="Nepal SBOM Scanner",
+    version=APP_VERSION,
+    description="SBOM generation, OSV vulnerability intelligence, SPDX/CycloneDX export, and optional AI-assisted remediation.",
+)
+_https_only = os.environ.get("HTTPS_ONLY", "false").lower() in ("1", "true", "yes")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SESSION_SECRET_KEY", secrets.token_hex(32)),
+    same_site="lax",
+    https_only=_https_only,
+)
 
 security = HTTPBasic()
 
@@ -190,7 +205,7 @@ async def download_cyclonedx(scan_id: int, username: str = Depends(get_current_u
         "version": 1,
         "metadata": {
             "timestamp": scan["created_at"],
-            "tools": [{"name": "Nepal SBOM Scanner", "version": "0.2.0"}]
+            "tools": [{"name": "Nepal SBOM Scanner", "version": APP_VERSION}]
         },
         "components": []
     }
@@ -204,11 +219,6 @@ async def download_cyclonedx(scan_id: int, username: str = Depends(get_current_u
         })
 
     return JSONResponse(content=cyclonedx)
-
-@app.get("/history")
-async def history(username: str = Depends(get_current_username)):
-    scans = get_recent_scans(50)
-    return JSONResponse(content={"scans": scans})
 
 class ExplainRequest(BaseModel):
     package_name: str
@@ -301,7 +311,11 @@ async def list_github_repos(request: Request):
         return JSONResponse(content=resp.json())
 
 @app.post("/scan/github-private")
-async def scan_private_repo(request: Request, repo_full_name: str = Form(...)):
+async def scan_private_repo(
+    request: Request,
+    repo_full_name: str = Form(...),
+    username: str = Depends(get_current_username),
+):
     token = request.session.get("github_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated with GitHub")
@@ -333,7 +347,16 @@ async def scan_private_repo(request: Request, repo_full_name: str = Form(...)):
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 @app.post("/github/create-fix-pr")
-async def create_fix_pr(request: Request, repo_full_name: str = Form(...), cve_id: str = Form(...), package_name: str = Form(...), current_version: str = Form(...), severity: str = Form(...), summary: str = Form(...)):
+async def create_fix_pr(
+    request: Request,
+    repo_full_name: str = Form(...),
+    cve_id: str = Form(...),
+    package_name: str = Form(...),
+    current_version: str = Form(...),
+    severity: str = Form(...),
+    summary: str = Form(...),
+    username: str = Depends(get_current_username),
+):
     token = request.session.get("github_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated with GitHub")
@@ -364,8 +387,6 @@ async def create_fix_pr(request: Request, repo_full_name: str = Form(...), cve_i
         if os.path.exists(req_path):
             with open(req_path, "r") as f:
                 content = f.read()
-            # Simple replacement for name==version or name>=version
-            import re
             new_content = re.sub(
                 rf"^{re.escape(target_package)}([<>=! ]+).*", 
                 f"{target_package}=={target_version}", 
@@ -404,8 +425,19 @@ async def create_fix_pr(request: Request, repo_full_name: str = Form(...), cve_i
         subprocess.run(["git", "commit", "-m", f"fix({target_package}): resolve {cve_id} by upgrading to {target_version}"], cwd=temp_dir, check=True)
         subprocess.run(["git", "push", "origin", branch_name], cwd=temp_dir, check=True)
 
-        # 6. Open Pull Request
-        async with httpx.AsyncClient() as client:
+        # 6. Open Pull Request (base = repo default branch when available)
+        default_branch = os.environ.get("DEFAULT_GIT_BRANCH", "main")
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            meta = await client.get(
+                f"https://api.github.com/repos/{repo_full_name}",
+                headers={
+                    "Authorization": f"token {token}",
+                    "Accept": "application/vnd.github.v3+json",
+                },
+            )
+            if meta.status_code == 200:
+                default_branch = meta.json().get("default_branch") or default_branch
+
             resp = await client.post(
                 f"https://api.github.com/repos/{repo_full_name}/pulls",
                 headers={
@@ -416,7 +448,7 @@ async def create_fix_pr(request: Request, repo_full_name: str = Form(...), cve_i
                     "title": f"Security Fix: {target_package} upgrade to {target_version}",
                     "body": f"This automated PR fixes vulnerability **{cve_id}** ({severity} severity).\n\n**Description:** {summary}\n\n**Action taken:** Upgraded `{target_package}` from `{current_version}` to `{target_version}`.",
                     "head": branch_name,
-                    "base": "main" # Assumes main, could be dynamic
+                    "base": default_branch,
                 }
             )
             pr_data = resp.json()
@@ -430,59 +462,51 @@ async def create_fix_pr(request: Request, repo_full_name: str = Form(...), cve_i
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-@app.get("/history")
-async def history(request: Request):
+@app.get("/history", response_class=HTMLResponse)
+async def history(request: Request, username: str = Depends(get_current_username)):
     scans = get_recent_scans(limit=20)
     return templates.TemplateResponse("history.html", {"request": request, "scans": scans})
 
 @app.get("/api/history")
-async def api_history():
+async def api_history(username: str = Depends(get_current_username)):
     scans = get_recent_scans(limit=50)
-    # Convert sqlite objects to list of dicts
-    history_list = []
-    for s in scans:
-        # SQLite rows can be accessed by index or by name if using Row factory
-        # To be safe, we'll try to convert to dict or use index
-        try:
-            history_list.append({
-                "id": s["id"],
-                "project_name": s["project_name"],
-                "timestamp": s["created_at"],
-                "total_packages": s["total_packages"],
-                "critical_count": s["critical_count"],
-                "high_count": s["high_count"]
-            })
-        except (TypeError, KeyError):
-            history_list.append({
-                "id": s[0],
-                "project_name": s[1],
-                "timestamp": s[2],
-                "total_packages": s[3],
-                "critical_count": s[4],
-                "high_count": s[5]
-            })
+    history_list = [
+        {
+            "id": s["id"],
+            "project_name": s["project_name"],
+            "timestamp": s["created_at"],
+            "total_packages": s["total_packages"],
+            "critical_count": s["critical_count"],
+            "high_count": s["high_count"],
+        }
+        for s in scans
+    ]
     return JSONResponse(content={"scans": history_list})
 
 @app.get("/download/spdx/{scan_id}")
-async def download_spdx(scan_id: int):
+async def download_spdx(scan_id: int, username: str = Depends(get_current_username)):
     scan = get_scan_by_id(scan_id)
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
-    
-    report_data = json.loads(scan[6])
+
+    report_data = json.loads(scan["json_report"])
     spdx_json = generate_spdx(report_data)
-    
+
+    safe_project = "".join(
+        c if c.isalnum() or c in "-._" else "_" for c in scan["project_name"]
+    )[:64]
+    created = scan.get("created_at") or "unknown"
+    date_part = str(created).replace(" ", "T").split("T")[0]
+    filename = f"sbom-{safe_project}-{date_part}.spdx.json"
+
     return Response(
         content=spdx_json,
         media_type="application/json",
-        headers={
-            "Content-Disposition": f"attachment; filename=sbom-{scan[1]}-{scan[2].split()[0]}.spdx.json"
-        }
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 @app.get("/health")
 async def health():
-    import aiohttp
     checks = {
         "api": "ok",
         "database": "unknown",
@@ -509,7 +533,7 @@ async def health():
 
     all_ok = all(v == "ok" for v in checks.values())
     return JSONResponse(
-        content={"status": "healthy" if all_ok else "degraded", "checks": checks, "version": "0.2.0"},
+        content={"status": "healthy" if all_ok else "degraded", "checks": checks, "version": APP_VERSION},
         status_code=200 if all_ok else 503
     )
 

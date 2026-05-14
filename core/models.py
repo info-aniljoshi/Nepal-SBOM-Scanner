@@ -21,6 +21,10 @@ class Vulnerability(BaseModel):
     severity: Severity = Severity.UNKNOWN
     cvss_score: Optional[float] = None
     aliases: List[str] = []
+    # Populated for dependency findings (OSV batch index alignment)
+    affected_package: Optional[str] = None
+    affected_version: Optional[str] = None
+    affected_ecosystem: Optional[str] = None
 
 class SbomReport(BaseModel):
     project_name: str

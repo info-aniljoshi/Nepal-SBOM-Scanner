@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: nepal-sbom-scanner
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: SESSION_SECRET_KEY
+        generateValue: true
+      - key: HTTPS_ONLY
+        value: "true"
+      - key: PORT
+        value: "8000"

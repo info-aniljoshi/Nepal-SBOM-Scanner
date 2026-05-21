@@ -13,4 +13,5 @@ COPY . .
 EXPOSE 8000
 
 # Use gunicorn with uvicorn workers for production
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "web.app:app", "-b", "0.0.0.0:8000"]
+# Render sets $PORT dynamically; fall back to 8000 locally
+CMD gunicorn -w 2 -k uvicorn.workers.UvicornWorker web.app:app -b 0.0.0.0:${PORT:-8000}

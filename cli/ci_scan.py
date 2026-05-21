@@ -1,11 +1,12 @@
 import os
 import sys
-import requests
+import httpx
 import tempfile
 import zipfile
 import argparse
+from pathlib import Path
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Nepal SBOM Scanner CI/CD Tool")
     parser.add_argument("--url", required=True, help="Base URL of your Nepal SBOM Scanner (e.g. http://scanner.example.com)")
     parser.add_argument("--username", required=True, help="Admin username")
@@ -17,14 +18,12 @@ def main():
 
     print(f"[*] Preparing to scan project at {args.path}...")
     
-    # Create temporary zip
     with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
         tmp_path = tmp.name
         
     try:
         with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(args.path):
-                # Skip hidden dirs and common ignore patterns
                 dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('node_modules', 'venv', '__pycache__')]
                 for file in files:
                     if not file.startswith('.'):
@@ -33,11 +32,30 @@ def main():
                         zipf.write(file_path, arcname)
         
         print("[*] Uploading to Nepal SBOM Scanner...")
+        
         with open(tmp_path, 'rb') as f:
-            response = requests.post(
+            # First perform a GET request to obtain the CSRF token (if applicable)
+            client = httpx.Client(auth=(args.username, args.password))
+            csrf_token = ""
+            
+            try:
+                # Try to get CSRF token from a fast endpoint or index
+                idx_response = client.get(f"{args.url.rstrip('/')}/")
+                if "csrftoken" in client.cookies:
+                    csrf_token = client.cookies["csrftoken"]
+            except Exception:
+                pass
+            
+            headers = {}
+            if csrf_token:
+                headers["X-CSRF-Token"] = csrf_token
+
+            files_payload = {'file': (os.path.basename(args.path) + '.zip', f, 'application/zip')}
+            response = client.post(
                 f"{args.url.rstrip('/')}/scan/upload",
-                files={'file': (os.path.basename(args.path) + '.zip', f, 'application/zip')},
-                auth=(args.username, args.password)
+                files=files_payload,
+                headers=headers,
+                timeout=120.0
             )
         
         if response.status_code != 200:
@@ -51,13 +69,11 @@ def main():
         critical = report.get("critical_count", 0)
         high = report.get("high_count", 0)
         
-        # Calculate other counts
         medium = len([v for v in vulns if v.get('severity') == 'MEDIUM'])
         low = len([v for v in vulns if v.get('severity') == 'LOW'])
         
         print(f"[!] Results: {critical} Critical, {high} High, {medium} Medium, {low} Low")
         
-        # Check for failure
         should_fail = False
         if args.fail_on == "critical" and critical > 0:
             should_fail = True
@@ -75,6 +91,9 @@ def main():
             print("[+] Build passed!")
             sys.exit(0)
             
+    except Exception as e:
+        print(f"[X] Error during scan: {e}")
+        sys.exit(1)
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)

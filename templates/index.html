@@ -111,8 +111,15 @@
                     <p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Enterprise Security for South Asia</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-6">
-                <div class="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200">
+            <div class="flex items-center space-x-4">
+                <a href="/history" class="text-sm font-semibold text-gray-600 hover:text-red-600 transition flex items-center">
+                    <i data-lucide="clock" class="w-4 h-4 mr-1.5"></i>
+                    History
+                </a>
+                {% if app_version %}
+                <span class="text-[10px] font-mono text-gray-400 border border-gray-200 rounded px-2 py-1">v{{ app_version }}</span>
+                {% endif %}
+                <div class="h-8 w-8 bg-gray-100 rounded-full flex items-center justify-center border border-gray-200" title="Signed in">
                     <i data-lucide="user" class="w-4 h-4 text-gray-600"></i>
                 </div>
             </div>
@@ -267,7 +274,11 @@
                     <div class="flex space-x-3">
                         <a id="downloadSpdxBtn" href="#" class="hidden px-5 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-50 transition flex items-center">
                             <i data-lucide="download" class="w-4 h-4 mr-2 text-blue-600"></i>
-                            Download SPDX
+                            SPDX
+                        </a>
+                        <a id="downloadCdxBtn" href="#" class="hidden px-5 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-50 transition flex items-center">
+                            <i data-lucide="package" class="w-4 h-4 mr-2 text-violet-600"></i>
+                            CycloneDX
                         </a>
                         <button id="execSummaryBtn" onclick="generateExecutiveSummary()" class="px-5 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-black transition flex items-center shadow-lg shadow-gray-200">
                             <i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>
@@ -322,6 +333,20 @@
         let currentRepoFullName = null;
         let currentScanReport = null;
 
+        function readCookie(name) {
+            const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const m = document.cookie.match(new RegExp('(?:^|; )' + esc + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : '';
+        }
+
+        /** Same-origin fetch with CSRF double-submit header (required by server middleware). */
+        function apiFetch(url, options = {}) {
+            const headers = new Headers(options.headers || {});
+            const csrf = readCookie('csrftoken');
+            if (csrf) headers.set('X-CSRF-Token', csrf);
+            return fetch(url, { credentials: 'same-origin', ...options, headers });
+        }
+
         // Initialize Icons
         lucide.createIcons();
 
@@ -353,7 +378,7 @@
             const formData = new FormData();
             formData.append('file', file);
 
-            fetch('/scan/upload', { method: 'POST', body: formData })
+            apiFetch('/scan/upload', { method: 'POST', body: formData })
             .then(res => res.json())
             .then(data => {
                 uploadProgress.classList.add('hidden');
@@ -377,7 +402,7 @@
             const formData = new URLSearchParams();
             formData.append('repo_url', url);
 
-            fetch('/scan/github', {
+            apiFetch('/scan/github', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData.toString()
@@ -389,8 +414,11 @@
             })
             .then(data => {
                 uploadProgress.classList.add('hidden');
-                const repoName = url.replace(/\/+$/, '').split('/').pop().replace('.git', '');
-                displayResults(data, repoName);
+                const repoFull = data.github_full_name || (() => {
+                    const m = url.trim().replace(/\/+$/, '').match(/github\.com\/([^/]+\/[^/]+?)(?:\.git)?$/i);
+                    return m ? m[1] : null;
+                })();
+                displayResults(data, repoFull);
             })
             .catch(err => {
                 uploadProgress.classList.add('hidden');
@@ -407,6 +435,9 @@
             const dlBtn = document.getElementById('downloadSpdxBtn');
             dlBtn.href = `/download/spdx/${data.scan_id}`;
             dlBtn.classList.remove('hidden');
+            const cdxBtn = document.getElementById('downloadCdxBtn');
+            cdxBtn.href = `/download/cyclonedx/${data.scan_id}`;
+            cdxBtn.classList.remove('hidden');
 
             document.getElementById('execSummaryPanel').classList.add('hidden');
             document.getElementById('execSummaryBtn').innerHTML = '<i data-lucide="sparkles" class="w-4 h-4 mr-2"></i> Generate AI Executive Summary';
@@ -488,7 +519,7 @@
             btn.innerHTML = '<div class="animate-spin h-4 w-4 border-b-2 border-blue-600 rounded-full inline-block"></div>';
 
             try {
-                const res = await fetch(`/explain/${encodeURIComponent(cve_id)}`, {
+                const res = await apiFetch(`/explain/${encodeURIComponent(cve_id)}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -554,20 +585,20 @@
             formData.append('summary', summary);
 
             try {
-                const res = await fetch('/github/create-fix-pr', {
+                const res = await apiFetch('/github/create-fix-pr', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData.toString()
                 });
                 const data = await res.json();
-                if (data.status === 'success') {
+                if (res.ok && data.status === 'success' && data.pr_url) {
                     btn.innerHTML = '<i data-lucide="external-link" class="w-4 h-4 mr-2"></i> View PR on GitHub';
                     btn.classList.replace('bg-green-600', 'bg-blue-600');
                     btn.onclick = () => window.open(data.pr_url, '_blank');
                     btn.disabled = false;
                     lucide.createIcons();
                 } else {
-                    throw new Error(data.error || 'Failed to create PR');
+                    throw new Error(data.error || data.detail || 'Failed to create PR');
                 }
             } catch (err) {
                 alert('Error: ' + err.message);
@@ -589,7 +620,7 @@
             content.innerHTML = '<div class="flex items-center space-x-3 text-blue-600 font-bold"><div class="animate-bounce">🧠</div> AI is drafting report...</div>';
 
             try {
-                const res = await fetch(`/executive-summary/${currentScanId}`);
+                const res = await apiFetch(`/executive-summary/${currentScanId}`);
                 const data = await res.json();
                 content.innerHTML = `<div class="whitespace-pre-wrap font-sans text-base leading-relaxed text-gray-700">${data.summary || 'Failed to generate summary.'}</div>`;
             } catch (err) {
@@ -603,7 +634,7 @@
 
         async function checkGitHubAuth() {
             try {
-                const res = await fetch('/github/user');
+                const res = await apiFetch('/github/user');
                 const data = await res.json();
                 if (data.authenticated) {
                     document.getElementById('githubAuthSection').classList.add('hidden');
@@ -618,7 +649,7 @@
         async function loadRepos() {
             const select = document.getElementById('repoSelect');
             try {
-                const res = await fetch('/github/repos');
+                const res = await apiFetch('/github/repos');
                 const repos = await res.json();
                 select.innerHTML = '<option value="">Choose a repository...</option>';
                 repos.forEach(repo => {
@@ -641,7 +672,7 @@
             formData.append('repo_full_name', repoFullName);
 
             try {
-                const res = await fetch('/scan/github-private', {
+                const res = await apiFetch('/scan/github-private', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData.toString()
@@ -658,7 +689,7 @@
 
         async function loadActivityFeed() {
             try {
-                const res = await fetch('/api/history');
+                const res = await apiFetch('/api/history');
                 const data = await res.json();
                 const feed = document.getElementById('activityFeed');
                 feed.innerHTML = '';
@@ -678,7 +709,7 @@
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-gray-900">${scan.project_name}</p>
-                                <p class="text-[10px] text-gray-400 font-medium">${scan.timestamp.split(' ')[0]}</p>
+                                <p class="text-[10px] text-gray-400 font-medium">${(scan.created_at || scan.timestamp || '').toString().split(' ')[0]}</p>
                             </div>
                         </div>
                         <div class="text-right">

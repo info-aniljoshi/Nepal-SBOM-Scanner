@@ -64,10 +64,14 @@
                                 </span>
                             </span>
                         </td>
-                        <td class="px-6 py-5">
+                        <td class="px-6 py-5 space-x-2">
                             <a href="/download/spdx/{{ scan.id }}" class="inline-flex items-center text-blue-600 hover:text-blue-800 text-xs font-bold border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition">
                                 <i data-lucide="download" class="w-3 h-3 mr-2"></i>
-                                Download SPDX
+                                SPDX
+                            </a>
+                            <a href="/download/cyclonedx/{{ scan.id }}" class="inline-flex items-center text-violet-600 hover:text-violet-800 text-xs font-bold border border-violet-200 rounded-lg px-3 py-1.5 hover:bg-violet-50 transition">
+                                <i data-lucide="package" class="w-3 h-3 mr-2"></i>
+                                CycloneDX
                             </a>
                         </td>
                     </tr>

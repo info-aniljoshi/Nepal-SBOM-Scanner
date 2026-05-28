@@ -43,7 +43,7 @@ cp .env.example .env
 ```bash
 python -m web.app
 ```
-Access the dashboard at `http://localhost:8000` (Default: `admin` / `nepal123`).
+Access the dashboard at `http://localhost:8000` (Default: `admin` / `NepalScan_Secure_2026!@#`).
 
 ---
 
